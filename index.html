@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>منيو مطعم موحا | كريب وبرجر وسندوتشات - الجيزة</title>
+    <meta name="description" content="منيو مطعم وكريب موحا بالجيزة (ساقية مكي): كريب فراخ ولحمة، برجر، فرنساوي، رول وورقة بلدي. اطلب أونلاين وأرسل طلبك على واتساب.">
+    <meta name="theme-color" content="#111111">
+
+    <!-- Open Graph: شكل الرابط لما يتبعت على واتساب/فيسبوك -->
+    <!-- ⚠️ غيّر YOUR-USERNAME بعد ما ترفع الموقع على GitHub Pages -->
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ar_EG">
+    <meta property="og:title" content="منيو مطعم موحا - اطلب أونلاين">
+    <meta property="og:description" content="كريب • برجر • فرنساوي • رول • ورقة بلدي. اطلب دلوقتي على واتساب.">
+    <meta property="og:image" content="https://YOUR-USERNAME.github.io/mo7a-menu/assets/og-image.png">
+    <meta property="og:url" content="https://YOUR-USERNAME.github.io/mo7a-menu/">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "مطعم وكريب موحا",
+      "servesCuisine": ["كريب", "برجر", "سندوتشات"],
+      "telephone": "+201019201338",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "شارع المطحن - ساقية مكي",
+        "addressLocality": "الجيزة",
+        "addressCountry": "EG"
+      },
+      "acceptsReservations": false
+    }
+    </script>
+</head>
+<body>
+
+<header class="header">
+    <div class="logo-badge">MO7A</div>
+    <h1>مطعم وكريب موحا 🌯🍔</h1>
+    <p>طعم الخبرة والجودة العالية - اطلب الآن أونلاين</p>
+    <div class="header-info" id="header-info"></div>
+</header>
+
+<div class="sticky-bar">
+    <div class="sticky-inner">
+        <div class="search-wrap">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="search" placeholder="ابحث عن صنف... (مثال: زنجر)" aria-label="بحث في المنيو" autocomplete="off">
+        </div>
+        <nav class="nav-categories" id="nav" aria-label="أقسام المنيو"></nav>
+    </div>
+</div>
+
+<main class="container">
+    <div id="menu"></div>
+    <p class="no-results" id="no-results" hidden>😕 مفيش صنف بالاسم ده. جرّب كلمة تانية.</p>
+
+    <section class="address-footer" aria-label="بيانات التواصل">
+        <div id="footer-address"></div>
+        <div id="footer-phones" class="phones"></div>
+        <div id="footer-hours"></div>
+        <a id="footer-map" class="map-link" target="_blank" rel="noopener" hidden>🗺️ افتح الموقع على الخريطة</a>
+    </section>
+</main>
+
+<!-- شريط السلة السفلي -->
+<div class="cart-bar">
+    <div class="cart-info">
+        <span class="cart-total-title">الإجمالي (<span id="cart-count">0</span> صنف)</span>
+        <span class="cart-total-amount" id="bar-total">0 جنيه</span>
+    </div>
+    <button class="btn-open-cart" id="open-cart" type="button">🛒 مراجعة الطلب</button>
+</div>
+
+<!-- نافذة السلة والطلب -->
+<div class="drawer" id="drawer" hidden>
+    <div class="drawer-overlay" data-close></div>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-head">
+            <h2 id="drawer-title">🛒 طلبك</h2>
+            <button type="button" class="icon-btn" data-close aria-label="إغلاق">✕</button>
+        </div>
+
+        <div class="drawer-body" id="drawer-body">
+            <div id="empty-cart" class="empty-cart">السلة فاضية.. اختار أصناف من المنيو 😋</div>
+            <ul id="cart-list" class="cart-list"></ul>
+            <button type="button" id="clear-cart" class="link-btn" hidden>🗑️ تفريغ السلة</button>
+
+            <form id="order-form" novalidate autocomplete="on" hidden>
+                <div class="form-title">📍 بيانات الطلب</div>
+
+                <div class="seg" role="radiogroup" aria-label="طريقة الاستلام">
+                    <label><input type="radio" name="otype" value="delivery" checked><span>🛵 توصيل</span></label>
+                    <label><input type="radio" name="otype" value="pickup"><span>🏪 استلام من الفرع</span></label>
+                </div>
+
+                <div class="form-group">
+                    <label for="cust-name">الاسم الكامل *</label>
+                    <input type="text" id="cust-name" name="name" autocomplete="name" placeholder="اكتب اسمك...">
+                    <span class="error" data-err="name"></span>
+                </div>
+                <div class="form-group">
+                    <label for="cust-phone">رقم الموبايل *</label>
+                    <input type="tel" id="cust-phone" name="tel" inputmode="tel" autocomplete="tel" placeholder="01xxxxxxxxx" dir="ltr">
+                    <span class="error" data-err="phone"></span>
+                </div>
+                <div class="form-group" id="address-group">
+                    <label for="cust-address">عنوان التوصيل بالتفصيل *</label>
+                    <textarea id="cust-address" name="address" rows="2" autocomplete="street-address" placeholder="الشارع - رقم العمارة - الدور - الشقة - علامة مميزة..."></textarea>
+                    <span class="error" data-err="address"></span>
+                </div>
+                <div class="form-group">
+                    <label for="cust-pay">طريقة الدفع</label>
+                    <select id="cust-pay"></select>
+                </div>
+                <div class="form-group">
+                    <label for="cust-notes">ملاحظات (اختياري)</label>
+                    <input type="text" id="cust-notes" placeholder="مثال: بدون كاتشب / حار / ...">
+                </div>
+
+                <div class="summary">
+                    <div><span>المجموع</span><b id="sum-sub">0</b></div>
+                    <div><span>التوصيل</span><b id="sum-fee">—</b></div>
+                    <div class="grand"><span>الإجمالي</span><b id="sum-total">0</b></div>
+                    <p class="hint" id="sum-hint"></p>
+                </div>
+                <span class="error" id="min-err"></span>
+
+                <button type="submit" class="btn-send-whatsapp">💬 إرسال الطلب على واتساب</button>
+            </form>
+
+            <div id="done" class="done" hidden>
+                <div class="done-icon">✅</div>
+                <h3>تم تجهيز طلبك!</h3>
+                <p>اضغط "إرسال" في واتساب عشان يوصلنا الطلب، وهنكلمك للتأكيد.</p>
+                <a id="done-link" class="btn-send-whatsapp" target="_blank" rel="noopener">لو واتساب مفتحش اضغط هنا</a>
+                <button type="button" class="link-btn" id="new-order">🔄 طلب جديد (تفريغ السلة)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<noscript><p style="padding:20px;text-align:center">الموقع محتاج تفعيل JavaScript عشان يعرض المنيو. للطلب اتصل: 01019201338</p></noscript>
+
+<script src="js/config.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
