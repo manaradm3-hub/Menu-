@@ -61,11 +61,25 @@
         return Object.keys(cart).reduce((s, id) => s + cart[id], 0);
     }
     function orderType() { return $('input[name="otype"]:checked').value; }
+    const zones = C.deliveryZones || [];
+    function selectedZone() {
+        const i = $('#cust-zone').value;
+        return i === '' ? null : zones[parseInt(i, 10)] || null;
+    }
+    // null = لسه مش متحددة
     function deliveryFee(sub) {
         if (orderType() !== 'delivery') return 0;
-        if (C.deliveryFee === null || C.deliveryFee === undefined) return null; // غير محددة
+        let base;
+        if (zones.length) {
+            const z = selectedZone();
+            if (!z) return null;
+            base = z.fee;
+        } else {
+            if (C.deliveryFee === null || C.deliveryFee === undefined) return null;
+            base = C.deliveryFee;
+        }
         if (C.freeDeliveryFrom && sub >= C.freeDeliveryFrom) return 0;
-        return C.deliveryFee;
+        return base;
     }
 
     // ---------- بناء المنيو ----------
@@ -208,7 +222,7 @@
         const feeEl = $('#sum-fee');
         let total = sub;
         if (orderType() === 'pickup') feeEl.textContent = 'بدون';
-        else if (fee === null) feeEl.textContent = 'تتحدد عند التأكيد';
+        else if (fee === null) feeEl.textContent = zones.length ? 'حدّد المنطقة' : 'تتحدد عند التأكيد';
         else if (fee === 0) feeEl.textContent = 'مجاني 🎉';
         else { feeEl.textContent = money(fee); total += fee; }
         $('#sum-total').textContent = money(total);
@@ -216,10 +230,11 @@
         let hint = '';
         if (orderType() === 'delivery') {
             if (C.minOrder && sub < C.minOrder) hint = 'أقل طلب للتوصيل ' + money(C.minOrder) + ' (باقي ' + money(C.minOrder - sub) + ')';
-            else if (C.freeDeliveryFrom && fee !== 0 && C.deliveryFee) hint = 'اطلب بـ ' + money(C.freeDeliveryFrom - sub) + ' زيادة والتوصيل مجاني!';
+            else if (C.freeDeliveryFrom && fee > 0) hint = 'اطلب بـ ' + money(C.freeDeliveryFrom - sub) + ' زيادة والتوصيل مجاني!';
         }
         $('#sum-hint').textContent = hint;
         $('#address-group').hidden = orderType() === 'pickup';
+        $('#zone-group').hidden = orderType() === 'pickup' || !zones.length;
     }
 
     // ---------- السلة (نافذة) ----------
@@ -241,7 +256,7 @@
     function setErr(name, msg) {
         const e = $('[data-err="' + name + '"]');
         if (e) e.textContent = msg || '';
-        const map = { name: 'cust-name', phone: 'cust-phone', address: 'cust-address' };
+        const map = { name: 'cust-name', phone: 'cust-phone', address: 'cust-address', zone: 'cust-zone' };
         const f = $('#' + map[name]);
         if (f) f.setAttribute('aria-invalid', msg ? 'true' : 'false');
     }
@@ -253,10 +268,11 @@
         const address = $('#cust-address').value.trim();
         const delivery = orderType() === 'delivery';
 
-        setErr('name', ''); setErr('phone', ''); setErr('address', ''); $('#min-err').textContent = '';
+        setErr('name', ''); setErr('phone', ''); setErr('address', ''); setErr('zone', ''); $('#min-err').textContent = '';
 
         if (name.length < 2) { setErr('name', 'اكتب اسمك'); ok = false; first = first || '#cust-name'; }
         if (!/^01[0125]\d{8}$/.test(phone)) { setErr('phone', 'رقم موبايل مصري غير صحيح (مثال: 01012345678)'); ok = false; first = first || '#cust-phone'; }
+        if (delivery && zones.length && !selectedZone()) { setErr('zone', 'اختر منطقة التوصيل'); ok = false; first = first || '#cust-zone'; }
         if (delivery && address.length < 8) { setErr('address', 'اكتب عنوان التوصيل بالتفصيل'); ok = false; first = first || '#cust-address'; }
         if (delivery && C.minOrder && subtotal() < C.minOrder) {
             $('#min-err').textContent = 'أقل طلب للتوصيل ' + money(C.minOrder);
@@ -276,6 +292,7 @@
         L.push('🛵 *النوع:* ' + (d.delivery ? 'توصيل' : 'استلام من الفرع'));
         L.push('👤 *الاسم:* ' + d.name);
         L.push('📞 *التليفون:* ' + d.phone);
+        if (d.delivery && selectedZone()) L.push('🗺️ *المنطقة:* ' + selectedZone().name);
         if (d.delivery) L.push('🏠 *العنوان:* ' + d.address);
         L.push('💳 *الدفع:* ' + $('#cust-pay').value);
         if (notes) L.push('📝 *ملاحظات:* ' + notes);
@@ -302,7 +319,7 @@
         const d = validate();
         if (!d) return;
 
-        store(CUST_KEY, { name: d.name, phone: d.phone, address: d.address });
+        store(CUST_KEY, { name: d.name, phone: d.phone, address: d.address, zone: $('#cust-zone').value });
         const url = 'https://wa.me/' + C.whatsappNumber + '?text=' + encodeURIComponent(buildMessage(d));
         const w = window.open(url, '_blank');
         $('#done-link').href = url;
@@ -368,12 +385,19 @@
         C.paymentMethods.forEach(m => { const o = el('option', null, m); o.value = m; sel.appendChild(o); });
     }
 
+    function buildZones() {
+        const sel = $('#cust-zone');
+        const ph = el('option', null, 'اختر المنطقة'); ph.value = ''; sel.appendChild(ph);
+        zones.forEach((z, i) => { const o = el('option', null, z.name + ' — ' + money(z.fee)); o.value = String(i); sel.appendChild(o); });
+    }
+
     function restoreCustomer() {
         const c = read(CUST_KEY);
         if (!c) return;
         $('#cust-name').value = c.name || '';
         $('#cust-phone').value = c.phone || '';
         $('#cust-address').value = c.address || '';
+        if (c.zone !== undefined && zones[parseInt(c.zone, 10)]) $('#cust-zone').value = c.zone;
     }
 
     // ---------- أحداث ----------
@@ -395,6 +419,7 @@
         $('#new-order').addEventListener('click', () => { clearCart(); $('#done').hidden = true; closeDrawer(); toast('تم تفريغ السلة'); });
         $('#order-form').addEventListener('submit', submitOrder);
         $$('input[name="otype"]').forEach(r => r.addEventListener('change', () => renderSummary(subtotal())));
+        $('#cust-zone').addEventListener('change', () => { setErr('zone', ''); renderSummary(subtotal()); });
         $('#search').addEventListener('input', applySearch);
 
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#drawer').hidden) closeDrawer(); });
@@ -404,6 +429,7 @@
     buildMenu();
     buildFooter();
     buildPayments();
+    buildZones();
     restoreCustomer();
     bind();
     initScrollSpy();
